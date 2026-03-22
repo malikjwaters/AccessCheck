@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ location.name }} - Reviews</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <a href="{{ url_for('main.dashboard') }}">← Back to Map</a>
+        <h1>{{ location.name }}</h1>
+        <p>Added by {{ location.user.name }}</p>
+
+        <h2>Leave a Review</h2>
+        <form method="POST" action="{{ url_for('main.add_review', location_id=location.id) }}" enctype="multipart/form-data">
+            <label>Rating</label>
+            <select name="rating" required>
+                <option value="5">⭐⭐⭐⭐⭐ 5 stars</option>
+                <option value="4">⭐⭐⭐⭐ 4 stars</option>
+                <option value="3">⭐⭐⭐ 3 stars</option>
+                <option value="2">⭐⭐ 2 stars</option>
+                <option value="1">⭐ 1 star</option>
+            </select>
+            <label>Comment</label>
+            <textarea name="comment" placeholder="Write your review..."></textarea>
+            <label>Date of Visit</label>
+            <input type="date" name="date_of_visit">
+            <label>Photo</label>
+            <input type="file" name="photo" accept="image/*">
+            <button type="submit">Submit Review</button>
+        </form>
+
+        <h2>Reviews ({{ reviews|length }})</h2>
+        {% for review in reviews %}
+        <div class="review-card">
+            <p><b>{{ review.user.name }}</b> —
+                {% for i in range(review.rating) %}⭐{% endfor %}
+            </p>
+            <p>{{ review.comment }}</p>
+            {% if review.date_of_visit %}
+                <p>Visited: {{ review.date_of_visit }}</p>
+            {% endif %}
+            {% if review.photo %}
+                <img src="{{ url_for('static', filename='uploads/' + review.photo) }}" width="200">
+            {% endif %}
+            <p><small>{{ review.created_at.strftime('%B %d, %Y') }}</small></p>
+        </div>
+        {% else %}
+        <p>No reviews yet — be the first!</p>
+        {% endfor %}
+    </div>
+</body>
+</html>

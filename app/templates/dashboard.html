@@ -5,10 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AccessCheck - Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        #map { height: 500px; width: 100%; }
+        #location-form { display: none; padding: 10px; background: #f9f9f9; margin-top: 10px; border-radius: 8px; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Dashboard</h1>
+        <h1>AccessCheck</h1>
         <a href="{{ url_for('main.logout') }}">Logout</a>
+        <p>Click anywhere on the map to drop a pin and name the location.</p>
+        <div id="map"></div>
+
+        <div id="location-form">
+            <h3>Name this location</h3>
+            <input type="text" id="location-name" placeholder="Enter location name">
+            <button onclick="saveLocation()">Save Pin</button>
+            <button onclick="cancelPin()">Cancel</button>
+        </div>
     </div>
+
+    <script>
+        let map, tempMarker, tempLatLng;
+        const locations = {{ locations | tojson }};
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 35.1495, lng: -90.0490 },
+                zoom: 12
+            });
+
+            locations.forEach(loc => {
+                const marker = new google.maps.Marker({
+                    position: { lat: loc.latitude, lng: loc.longitude },
+                    map: map,
+                    title: loc.name
+                });
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `<b>${loc.name}</b><br>Added by: ${loc.user}<br>
+                    <a href="/location/${loc.id}">View Reviews</a>`
+                });
+                marker.addListener('click', () => infoWindow.open(map, marker));
+            });
+
+            map.addListener('click', (e) => {
+                tempLatLng = e.latLng;
+                if (tempMarker) tempMarker.setMap(null);
+                tempMarker = new google.maps.Marker({
+                    position: tempLatLng,
+                    map: map,
+                    animation: google.maps.Animation.DROP
+                });
+                document.getElementById('location-form').style.display = 'block';
+            });
+        }
+
+        function saveLocation() {
+            const name = document.getElementById('location-name').value;
+            if (!name) { alert('Please enter a location name'); return; }
+
+            fetch('/add_location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    latitude: tempLatLng.lat(),
+                    longitude: tempLatLng.lng()
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('location-form').style.display = 'none';
+                    document.getElementById('location-name').value = '';
+                    alert('Location saved! Refresh to see it on the map.');
+                }
+            });
+        }
+
+        function cancelPin() {
+            if (tempMarker) tempMarker.setMap(null);
+            document.getElementById('location-form').style.display = 'none';
+        }
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&callback=initMap">
+    </script>
 </body>
+</html>
+
