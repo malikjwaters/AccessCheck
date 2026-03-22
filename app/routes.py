@@ -1,7 +1,61 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask_login import login_user, logout_user, login_required
+from werkzeug.security import generate_password_hash, check_password_hash
+from .models import db, User
 
 main = Blueprint('main', __name__)
 
 @main.route('/')
 def index():
-    return render_template('index.html')
+    return redirect(url_for('main.login'))
+
+@main.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = User.query.filter_by(email=email).first()
+
+        if not user or not check_password_hash(user.password, password):
+            flash('Invalid email or password')
+            return redirect(url_for('main.login'))
+
+        login_user(user)
+        return redirect(url_for('main.dashboard'))
+
+    return render_template('login.html')
+
+@main.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash('Email already exists')
+            return redirect(url_for('main.register'))
+
+        new_user = User(
+            name=name,
+            email=email,
+            password=generate_password_hash(password),
+            role='user'
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        return redirect(url_for('main.login'))
+
+    return render_template('register.html')
+
+@main.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('dashboard.html')
+
+@main.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('main.login'))
