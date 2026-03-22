@@ -40,7 +40,7 @@ def register():
         new_user = User(
             name=name,
             email=email,
-            password=generate_password_hash(password),
+            password=generate_password_hash(password, method='pbkdf2:sha256'),
             role='user'
         )
         db.session.add(new_user)
